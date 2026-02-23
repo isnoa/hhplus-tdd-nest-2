@@ -1,0 +1,24 @@
+# Node
+node_modules/
+dist/
+.env*
+yarn.lock
+package-lock.json
+npm-debug.log*
+yarn-error.log*
+.DS_Store
+coverage/
+.idea/
+.vscode/
+*.sqlite
+*.log
+*.local
+*.tmp
+# TypeORM
+ormconfig.js
+ormconfig.json
+# Prisma
+prisma/.env
+prisma/migrations/
+# Test
+coverage/

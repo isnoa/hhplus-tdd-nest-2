@@ -1,0 +1,5 @@
+export enum SeatStatus {
+  AVAILABLE = 'AVAILABLE',
+  TEMP_RESERVED = 'TEMP_RESERVED',
+  RESERVED = 'RESERVED',
+}

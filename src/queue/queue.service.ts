@@ -2,12 +2,12 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
-} from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { LessThan, Repository } from 'typeorm';
-import { randomUUID } from 'crypto';
-import { QueueToken, QueueTokenStatus } from './entities/queue-token.entity';
-import { CreateQueueTokenDto } from './dto/create-queue-token.dto';
+} from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { LessThan, Repository } from "typeorm";
+import { randomUUID } from "crypto";
+import { QueueToken, QueueTokenStatus } from "./entities/queue-token.entity";
+import { CreateQueueTokenDto } from "./dto/create-queue-token.dto";
 
 /** Max number of concurrently ACTIVE tokens */
 const MAX_ACTIVE_TOKENS = 50;
@@ -75,7 +75,9 @@ export class QueueService {
     const newToken = this.queueTokenRepository.create({
       userId: dto.userId,
       token: randomUUID(),
-      status: shouldActivate ? QueueTokenStatus.ACTIVE : QueueTokenStatus.WAITING,
+      status: shouldActivate
+        ? QueueTokenStatus.ACTIVE
+        : QueueTokenStatus.WAITING,
       expiresAt,
     });
     await this.queueTokenRepository.save(newToken);
@@ -100,8 +102,10 @@ export class QueueService {
     position: number | null;
     expiresAt: Date | null;
   }> {
-    const queueToken = await this.queueTokenRepository.findOne({ where: { token } });
-    if (!queueToken) throw new NotFoundException('토큰을 찾을 수 없습니다.');
+    const queueToken = await this.queueTokenRepository.findOne({
+      where: { token },
+    });
+    if (!queueToken) throw new NotFoundException("토큰을 찾을 수 없습니다.");
 
     const position =
       queueToken.status === QueueTokenStatus.WAITING
@@ -118,7 +122,9 @@ export class QueueService {
 
   /** Expire a token (called after payment completes) */
   async expireToken(token: string): Promise<void> {
-    const queueToken = await this.queueTokenRepository.findOne({ where: { token } });
+    const queueToken = await this.queueTokenRepository.findOne({
+      where: { token },
+    });
     if (!queueToken) return;
     queueToken.status = QueueTokenStatus.EXPIRED;
     queueToken.expiresAt = new Date();
@@ -141,7 +147,7 @@ export class QueueService {
       .createQueryBuilder()
       .update(QueueToken)
       .set({ status: QueueTokenStatus.EXPIRED })
-      .where('status = :status AND expiresAt < :now', {
+      .where("status = :status AND expiresAt < :now", {
         status: QueueTokenStatus.ACTIVE,
         now: new Date(),
       })
@@ -160,7 +166,7 @@ export class QueueService {
 
     const waiting = await this.queueTokenRepository.find({
       where: { status: QueueTokenStatus.WAITING },
-      order: { createdAt: 'ASC' },
+      order: { createdAt: "ASC" },
       take: slots,
     });
 
@@ -174,7 +180,10 @@ export class QueueService {
     if (waiting.length) await this.queueTokenRepository.save(waiting);
   }
 
-  private async getQueuePosition(tokenId: number, createdAt: Date): Promise<number> {
+  private async getQueuePosition(
+    tokenId: number,
+    createdAt: Date,
+  ): Promise<number> {
     const ahead = await this.queueTokenRepository.count({
       where: {
         status: QueueTokenStatus.WAITING,

@@ -29,7 +29,6 @@ export class PaymentPersistenceRepository implements IPaymentRepository {
       status: payment.getStatus().getValue() as any,
     } as any);
 
-
     const saved = await this.paymentRepository.save(entity as any);
 
     return this.toDomain(saved as any);
@@ -65,7 +64,9 @@ export class PaymentPersistenceRepository implements IPaymentRepository {
    * DATABASE 엔티티를 Domain 엔티티로 변환
    */
   private toDomain(payment: Payment): PaymentEntity {
-    const status = this.mapStatusToDomain((payment.status as unknown) as PaymentStatusEnum);
+    const status = this.mapStatusToDomain(
+      payment.status as unknown as PaymentStatusEnum,
+    );
     return PaymentEntity.reconstruct(
       payment.id,
       payment.userId,

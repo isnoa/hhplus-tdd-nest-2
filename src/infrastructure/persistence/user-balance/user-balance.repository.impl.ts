@@ -1,8 +1,8 @@
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { User } from '../../../user/entities/user.entity';
-import { IUserBalanceRepository } from '../../domain/repositories/user-balance.repository.interface';
+import { Injectable } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { User } from "../../../user/entities/user.entity";
+import { IUserBalanceRepository } from "../../domain/repositories/user-balance.repository.interface";
 
 /**
  * User Balance Repository Implementation
@@ -18,7 +18,7 @@ export class UserBalanceRepository implements IUserBalanceRepository {
   async getBalance(userId: number): Promise<number> {
     const user = await this.userRepository.findOne({
       where: { id: userId },
-      select: ['id', 'point'],
+      select: ["id", "point"],
     });
 
     return user?.point || 0;
@@ -27,7 +27,7 @@ export class UserBalanceRepository implements IUserBalanceRepository {
   async deductBalance(userId: number, amount: number): Promise<boolean> {
     const user = await this.userRepository.findOne({
       where: { id: userId },
-      select: ['id', 'point'],
+      select: ["id", "point"],
     });
 
     if (!user || user.point < amount) {
@@ -45,7 +45,7 @@ export class UserBalanceRepository implements IUserBalanceRepository {
   async chargeBalance(userId: number, amount: number): Promise<number> {
     const user = await this.userRepository.findOne({
       where: { id: userId },
-      select: ['id', 'point'],
+      select: ["id", "point"],
     });
 
     if (!user) {
@@ -53,10 +53,7 @@ export class UserBalanceRepository implements IUserBalanceRepository {
     }
 
     const newBalance = user.point + amount;
-    await this.userRepository.update(
-      { id: userId },
-      { point: newBalance },
-    );
+    await this.userRepository.update({ id: userId }, { point: newBalance });
 
     return newBalance;
   }
@@ -80,8 +77,8 @@ export class UserBalanceRepository implements IUserBalanceRepository {
         point: () => `point - ${amount}`,
         version: () => `version + 1`,
       })
-      .where('id = :userId', { userId })
-      .where('version = :version', { version: currentVersion })
+      .where("id = :userId", { userId })
+      .where("version = :version", { version: currentVersion })
       .execute();
 
     return (result.affected || 0) > 0;
@@ -92,7 +89,7 @@ export class UserBalanceRepository implements IUserBalanceRepository {
   ): Promise<{ version: number; point: number } | null> {
     const user = await this.userRepository.findOne({
       where: { id: userId },
-      select: ['id', 'version', 'point'],
+      select: ["id", "version", "point"],
     });
 
     if (!user) {

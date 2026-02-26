@@ -1,6 +1,8 @@
-import { MigrationInterface, QueryRunner } from 'typeorm';
+import { MigrationInterface, QueryRunner } from "typeorm";
 
-export class AddInfrastructureTables1709499839547 implements MigrationInterface {
+export class AddInfrastructureTables1709499839547
+  implements MigrationInterface
+{
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Create queue_tokens table
     await queryRunner.query(`
@@ -128,13 +130,13 @@ export class AddInfrastructureTables1709499839547 implements MigrationInterface 
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     // Drop tables in reverse order of creation
-    await queryRunner.query('DROP TABLE IF EXISTS queue_tokens;');
-    await queryRunner.query('DROP TABLE IF EXISTS point_histories;');
-    await queryRunner.query('DROP TABLE IF EXISTS payments;');
-    await queryRunner.query('DROP TABLE IF EXISTS reservations;');
-    await queryRunner.query('DROP TABLE IF EXISTS seats;');
-    await queryRunner.query('DROP TABLE IF EXISTS concert_schedules;');
-    await queryRunner.query('DROP TABLE IF EXISTS concerts;');
+    await queryRunner.query("DROP TABLE IF EXISTS queue_tokens;");
+    await queryRunner.query("DROP TABLE IF EXISTS point_histories;");
+    await queryRunner.query("DROP TABLE IF EXISTS payments;");
+    await queryRunner.query("DROP TABLE IF EXISTS reservations;");
+    await queryRunner.query("DROP TABLE IF EXISTS seats;");
+    await queryRunner.query("DROP TABLE IF EXISTS concert_schedules;");
+    await queryRunner.query("DROP TABLE IF EXISTS concerts;");
 
     // Remove added columns from users
     await queryRunner.query(`

@@ -1,9 +1,9 @@
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, LessThan } from 'typeorm';
-import { Seat } from '../../../concert/entities/seat.entity';
-import { SeatStatus } from '../../../common/enums/seat-status.enum';
-import { ISeatReservationRepository } from '../../domain/repositories/seat-reservation.repository.interface';
+import { Injectable } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository, LessThan } from "typeorm";
+import { Seat } from "../../../concert/entities/seat.entity";
+import { SeatStatus } from "../../../common/enums/seat-status.enum";
+import { ISeatReservationRepository } from "../../domain/repositories/seat-reservation.repository.interface";
 
 /**
  * Seat Reservation Repository Implementation
@@ -36,7 +36,7 @@ export class SeatReservationRepository implements ISeatReservationRepository {
 
     // 임시 예약 상태로 업데이트
     const result = await this.seatRepository.update(
-      { 
+      {
         id: seatId,
         status: SeatStatus.AVAILABLE,
       },
@@ -95,7 +95,10 @@ export class SeatReservationRepository implements ISeatReservationRepository {
     return null;
   }
 
-  async confirmReservation(seatId: number, reservationId: number): Promise<boolean> {
+  async confirmReservation(
+    seatId: number,
+    reservationId: number,
+  ): Promise<boolean> {
     const result = await this.seatRepository.update(
       { id: seatId, status: SeatStatus.TEMP_RESERVED },
       {
@@ -137,13 +140,13 @@ export class SeatReservationRepository implements ISeatReservationRepository {
 
   async getSeatStatus(
     seatId: number,
-  ): Promise<'AVAILABLE' | 'TEMP_RESERVED' | 'RESERVED'> {
+  ): Promise<"AVAILABLE" | "TEMP_RESERVED" | "RESERVED"> {
     const seat = await this.seatRepository.findOne({
       where: { id: seatId },
     });
 
     if (!seat) {
-      return 'AVAILABLE';
+      return "AVAILABLE";
     }
 
     // TEMP_RESERVED 상태이지만 만료되었으면 AVAILABLE로 간주
@@ -152,7 +155,7 @@ export class SeatReservationRepository implements ISeatReservationRepository {
       seat.tempReservedUntil &&
       new Date() > seat.tempReservedUntil
     ) {
-      return 'AVAILABLE';
+      return "AVAILABLE";
     }
 
     return seat.status as any;
@@ -175,7 +178,7 @@ export class SeatReservationRepository implements ISeatReservationRepository {
         tempReservedUserId: userId,
         status: SeatStatus.TEMP_RESERVED,
       },
-      select: ['id'],
+      select: ["id"],
     });
 
     return seats.map((seat) => seat.id);

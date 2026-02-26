@@ -37,5 +37,7 @@ export interface IUserBalanceRepository {
   /**
    * 사용자 버전/버전 번호 조회 (낙관적 락 용)
    */
-  getVersionInfo(userId: number): Promise<{ version: number; point: number } | null>;
+  getVersionInfo(
+    userId: number,
+  ): Promise<{ version: number; point: number } | null>;
 }

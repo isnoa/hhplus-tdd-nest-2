@@ -12,7 +12,9 @@ import { ConcertSchedule } from "../../../concert/entities/concert-schedule.enti
  * ConcertSchedule 데이터베이스를 통해 콘서트 일정 데이터에 접근하는 Adapter
  */
 @Injectable()
-export class ConcertScheduleRepositoryAdapter implements IConcertScheduleRepositoryPort {
+export class ConcertScheduleRepositoryAdapter
+  implements IConcertScheduleRepositoryPort
+{
   constructor(
     @InjectRepository(ConcertSchedule)
     private readonly scheduleRepository: Repository<ConcertSchedule>,

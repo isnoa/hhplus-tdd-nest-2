@@ -1,9 +1,9 @@
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { v4 as uuidv4 } from 'uuid';
-import { QueueToken } from './queue-token.entity';
-import { IQueueTokenRepository } from '../../domain/repositories/queue-token.repository.interface';
+import { Injectable } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { v4 as uuidv4 } from "uuid";
+import { QueueToken } from "./queue-token.entity";
+import { IQueueTokenRepository } from "../../domain/repositories/queue-token.repository.interface";
 
 /**
  * Queue Token Repository Implementation
@@ -18,7 +18,7 @@ export class QueueTokenRepository implements IQueueTokenRepository {
 
   async issueToken(userId: number, expiresAt: Date): Promise<string> {
     const token = uuidv4();
-    
+
     await this.queueTokenRepository.insert({
       token,
       userId,

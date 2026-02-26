@@ -28,7 +28,10 @@ export interface IPaymentRepository {
   /**
    * 사용자의 결제 내역 조회
    */
-  getPaymentsByUserId(userId: number, limit?: number): Promise<
+  getPaymentsByUserId(
+    userId: number,
+    limit?: number,
+  ): Promise<
     Array<{
       id: number;
       reservationId: number;
@@ -46,8 +49,5 @@ export interface IPaymentRepository {
   /**
    * 결제 상태 업데이트
    */
-  updatePaymentStatus(
-    paymentId: number,
-    status: string,
-  ): Promise<boolean>;
+  updatePaymentStatus(paymentId: number, status: string): Promise<boolean>;
 }

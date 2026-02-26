@@ -47,7 +47,7 @@ export interface ISeatReservationRepository {
    */
   getSeatStatus(
     seatId: number,
-  ): Promise<'AVAILABLE' | 'TEMP_RESERVED' | 'RESERVED'>;
+  ): Promise<"AVAILABLE" | "TEMP_RESERVED" | "RESERVED">;
 
   /**
    * 콘서트 스케줄의 사용 가능한 좌석 개수

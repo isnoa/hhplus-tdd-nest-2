@@ -10,12 +10,15 @@ import { ReservationService } from "../../../reservation/reservation.service";
  * ReservationService를 통해 예약 데이터에 접근하는 Adapter
  */
 @Injectable()
-export class ReservationRepositoryAdapter implements IReservationRepositoryPort {
+export class ReservationRepositoryAdapter
+  implements IReservationRepositoryPort
+{
   constructor(private readonly reservationService: ReservationService) {}
 
   async getReservation(reservationId: number): Promise<ReservationData | null> {
     try {
-      const reservation = await this.reservationService.getReservation(reservationId);
+      const reservation =
+        await this.reservationService.getReservation(reservationId);
       if (!reservation) return null;
 
       return {
@@ -36,7 +39,7 @@ export class ReservationRepositoryAdapter implements IReservationRepositoryPort 
     userId: number,
   ): Promise<ReservationData> {
     // ReservationService.confirmReservation requires a manager, not available here.
-    throw new Error('confirmReservation not supported by adapter');
+    throw new Error("confirmReservation not supported by adapter");
   }
 
   async cancelReservation(reservationId: number): Promise<boolean> {

@@ -1,9 +1,9 @@
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Payment } from '../../../payment/entities/payment.entity';
-import { PaymentStatus } from '../../../common/enums/payment-status.enum';
-import { IPaymentRepository } from '../../domain/repositories/payment.repository.interface';
+import { Injectable } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { Payment } from "../../../payment/entities/payment.entity";
+import { PaymentStatus } from "../../../common/enums/payment-status.enum";
+import { IPaymentRepository } from "../../domain/repositories/payment.repository.interface";
 
 /**
  * Payment Repository Implementation
@@ -37,9 +37,7 @@ export class PaymentRepository implements IPaymentRepository {
     };
   }
 
-  async getPayment(
-    paymentId: number,
-  ): Promise<{
+  async getPayment(paymentId: number): Promise<{
     id: number;
     userId: number;
     reservationId: number;
@@ -79,7 +77,7 @@ export class PaymentRepository implements IPaymentRepository {
   > {
     const payments = await this.paymentRepository.find({
       where: { userId },
-      order: { createdAt: 'DESC' },
+      order: { createdAt: "DESC" },
       take: limit ?? 10,
     });
 
@@ -100,7 +98,10 @@ export class PaymentRepository implements IPaymentRepository {
     return count > 0;
   }
 
-  async updatePaymentStatus(paymentId: number, status: string): Promise<boolean> {
+  async updatePaymentStatus(
+    paymentId: number,
+    status: string,
+  ): Promise<boolean> {
     const statusEnum = status as PaymentStatus;
     const result = await this.paymentRepository.update(
       { id: paymentId },

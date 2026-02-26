@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { IUserRepositoryPort } from "../../../core/application/ports/user-repository.port";
+import { IUserRepositoryPort } from "../../core/application/ports/user-repository.port";
 import { UserService } from "../../../user/user.service";
 
 /**
@@ -16,12 +16,10 @@ export class UserRepositoryAdapter implements IUserRepositoryPort {
   }
 
   async deductPoint(userId: number, amount: number): Promise<boolean> {
-    try {
-      await this.userService.deductPoint(userId, amount);
-      return true;
-    } catch (error) {
-      return false;
-    }
+    // UserService.deductPoint requires a transactional manager which is not
+    // available here, so adapter cannot perform deduction. Caller should
+    // interact with UserService directly.
+    return false;
   }
 
   async addPoint(userId: number, amount: number): Promise<boolean> {

@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common";
 import {
   IEventPublisherPort,
   PaymentEvent,
-} from "../../../core/application/ports/event-publisher.port";
+} from "../../core/application/ports/event-publisher.port";
 
 /**
  * EventPublisherAdapter

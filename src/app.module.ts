@@ -5,10 +5,12 @@ import { QueueModule } from './queue/queue.module';
 import { ConcertModule } from './concert/concert.module';
 import { ReservationModule } from './reservation/reservation.module';
 import { PaymentModule } from './payment/payment.module';
+import { InfrastructureModule } from './infrastructure/infrastructure.module';
 
 @Module({
   imports: [
     DatabaseModule,
+    InfrastructureModule,
     UserModule,
     QueueModule,
     ConcertModule,

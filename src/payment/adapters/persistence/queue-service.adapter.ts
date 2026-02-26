@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { IQueueServicePort } from "../../../core/application/ports/queue-service.port";
+import { IQueueServicePort } from "../../core/application/ports/queue-service.port";
 import { QueueService } from "../../../queue/queue.service";
 
 /**
@@ -13,7 +13,7 @@ export class QueueServiceAdapter implements IQueueServicePort {
   async checkQueueToken(token: string, userId: number): Promise<boolean> {
     try {
       const queueToken = await this.queueService.getQueueToken(token);
-      return queueToken && queueToken.userId === userId;
+      return queueToken != null && queueToken.userId === userId;
     } catch (error) {
       return false;
     }

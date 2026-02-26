@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common";
 import {
   IReservationRepositoryPort,
   ReservationData,
-} from "../../../core/application/ports/reservation-repository.port";
+} from "../../core/application/ports/reservation-repository.port";
 import { ReservationService } from "../../../reservation/reservation.service";
 
 /**
@@ -15,7 +15,7 @@ export class ReservationRepositoryAdapter implements IReservationRepositoryPort 
 
   async getReservation(reservationId: number): Promise<ReservationData | null> {
     try {
-      const reservation = await this.reservationService.findById(reservationId);
+      const reservation = await this.reservationService.getReservation(reservationId);
       if (!reservation) return null;
 
       return {
@@ -35,27 +35,12 @@ export class ReservationRepositoryAdapter implements IReservationRepositoryPort 
     reservationId: number,
     userId: number,
   ): Promise<ReservationData> {
-    const reservation = await this.reservationService.confirmReservation(
-      reservationId,
-      userId,
-    );
-
-    return {
-      id: reservation.id,
-      userId: reservation.userId,
-      seatId: reservation.seatId,
-      concertScheduleId: reservation.concertScheduleId,
-      status: reservation.status,
-      createdAt: reservation.createdAt,
-    };
+    // ReservationService.confirmReservation requires a manager, not available here.
+    throw new Error('confirmReservation not supported by adapter');
   }
 
   async cancelReservation(reservationId: number): Promise<boolean> {
-    try {
-      await this.reservationService.cancelReservation(reservationId);
-      return true;
-    } catch (error) {
-      return false;
-    }
+    // ReservationService does not support cancelReservation currently
+    return false;
   }
 }

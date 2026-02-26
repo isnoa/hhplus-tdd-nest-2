@@ -68,4 +68,11 @@ export class PaymentService {
       return payment;
     });
   }
+
+  /**
+   * Retrieve a single payment record by ID
+   */
+  async getPayment(id: number): Promise<Payment | null> {
+    return this.paymentRepository.findOne({ where: { id } });
+  }
 }

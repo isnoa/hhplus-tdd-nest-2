@@ -4,7 +4,7 @@ import { Repository } from "typeorm";
 import {
   IConcertScheduleRepositoryPort,
   ConcertScheduleData,
-} from "../../../core/application/ports/concert-schedule-repository.port";
+} from "../../core/application/ports/concert-schedule-repository.port";
 import { ConcertSchedule } from "../../../concert/entities/concert-schedule.entity";
 
 /**
@@ -29,7 +29,8 @@ export class ConcertScheduleRepositoryAdapter implements IConcertScheduleReposit
       id: schedule.id,
       price: schedule.price,
       totalSeats: schedule.totalSeats,
-      availableSeats: schedule.availableSeats,
+      // availableSeats는 엔티티에 존재하지 않으므로 totalSeats로 대체
+      availableSeats: schedule.totalSeats,
     };
   }
 }

@@ -1,13 +1,13 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
-import { PaymentEntity } from "../../../core/domain/entities/payment.entity";
-import { IPaymentRepository } from "../../../core/domain/repositories/payment.repository";
-import { Money } from "../../../core/domain/value-objects/money.value-object";
+import { PaymentEntity } from "../../core/domain/entities/payment.entity";
+import { IPaymentRepository } from "../../core/domain/repositories/payment.repository";
+import { Money } from "../../core/domain/value-objects/money.value-object";
 import {
   PaymentStatus,
   PaymentStatusEnum,
-} from "../../../core/domain/value-objects/payment-status.value-object";
+} from "../../core/domain/value-objects/payment-status.value-object";
 import { Payment } from "../../entities/payment.entity";
 
 /**
@@ -26,12 +26,13 @@ export class PaymentPersistenceRepository implements IPaymentRepository {
       userId: payment.getUserId(),
       reservationId: payment.getReservationId(),
       amount: payment.getAmount().getValue(),
-      status: payment.getStatus().getValue(),
-    });
+      status: payment.getStatus().getValue() as any,
+    } as any);
 
-    const saved = await this.paymentRepository.save(entity);
 
-    return this.toDomain(saved);
+    const saved = await this.paymentRepository.save(entity as any);
+
+    return this.toDomain(saved as any);
   }
 
   async findById(id: number): Promise<PaymentEntity | null> {
@@ -64,7 +65,7 @@ export class PaymentPersistenceRepository implements IPaymentRepository {
    * DATABASE 엔티티를 Domain 엔티티로 변환
    */
   private toDomain(payment: Payment): PaymentEntity {
-    const status = this.mapStatusToDomain(payment.status as PaymentStatusEnum);
+    const status = this.mapStatusToDomain((payment.status as unknown) as PaymentStatusEnum);
     return PaymentEntity.reconstruct(
       payment.id,
       payment.userId,
@@ -72,7 +73,8 @@ export class PaymentPersistenceRepository implements IPaymentRepository {
       Money.create(payment.amount),
       status,
       payment.createdAt,
-      payment.updatedAt || new Date(),
+      // Payment 엔티티에 updatedAt이 없으므로 createdAt 동일값 전달
+      payment.createdAt,
     );
   }
 

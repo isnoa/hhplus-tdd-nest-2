@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { IPaymentGatewayPort } from "../../../core/application/ports/payment-gateway.port";
+import { IPaymentGatewayPort } from "../../core/application/ports/payment-gateway.port";
 
 /**
  * PaymentGatewayAdapter

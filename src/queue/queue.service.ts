@@ -128,6 +128,13 @@ export class QueueService {
     await this.activateWaitingTokens();
   }
 
+  /**
+   * 토큰으로 사용자 정보를 조회 (Adapter에서 사용)
+   */
+  async getQueueToken(token: string): Promise<QueueToken | null> {
+    return this.queueTokenRepository.findOne({ where: { token } });
+  }
+
   /** Expire ACTIVE tokens whose expiresAt has passed */
   private async expireStaleTokens(): Promise<void> {
     await this.queueTokenRepository

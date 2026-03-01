@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from "@nestjs/common";
 
 export interface DataPlatformPayload {
   reservationId: number;
@@ -16,11 +16,12 @@ export interface DataPlatformPayload {
 @Injectable()
 export class DataPlatformApiClient {
   private readonly logger = new Logger(DataPlatformApiClient.name);
-  private readonly apiBaseUrl = process.env.DATA_PLATFORM_API_URL || 'https://data-platform.api/v1';
+  private readonly apiBaseUrl =
+    process.env.DATA_PLATFORM_API_URL || "https://data-platform.api/v1";
 
   /**
    * 예약 정보를 데이터 플랫폼에 전송
-   * 
+   *
    * @param payload 예약 정보
    * @returns 성공 여부
    */
@@ -39,9 +40,7 @@ export class DataPlatformApiClient {
         );
         return true;
       } else {
-        this.logger.warn(
-          `Failed to send reservation data: ${response.error}`,
-        );
+        this.logger.warn(`Failed to send reservation data: ${response.error}`);
         return false;
       }
     } catch (error) {
@@ -56,7 +55,7 @@ export class DataPlatformApiClient {
 
   /**
    * Mock API Call (실제 환경에서는 HttpClient.post() 사용)
-   * 
+   *
    * @param payload 예약 정보
    * @returns Mock 응답
    */
@@ -73,7 +72,7 @@ export class DataPlatformApiClient {
 
         resolve({
           success: isSuccess,
-          error: isSuccess ? undefined : 'Platform service unavailable',
+          error: isSuccess ? undefined : "Platform service unavailable",
         });
       }, 100);
     });
@@ -86,7 +85,9 @@ export class DataPlatformApiClient {
     succeeded: number;
     failed: number;
   }> {
-    this.logger.log(`Sending batch of ${payloads.length} records to data platform`);
+    this.logger.log(
+      `Sending batch of ${payloads.length} records to data platform`,
+    );
 
     let succeeded = 0;
     let failed = 0;

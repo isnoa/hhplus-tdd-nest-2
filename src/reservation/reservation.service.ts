@@ -125,7 +125,7 @@ export class ReservationService {
             seat.id,
             new Date(),
           );
-          this.eventEmitter.emit('reservation.created', event);
+          this.eventEmitter.emit("reservation.created", event);
         } catch (error) {
           console.error("Error emitting reservation created event:", error);
         }
@@ -215,7 +215,7 @@ export class ReservationService {
 
     // 예약 확인 이벤트 발행 (데이터 플랫폼 전송 등의 처리가 비동기로 수행됨)
     this.eventEmitter.emit(
-      'reservation.confirmed',
+      "reservation.confirmed",
       new ReservationConfirmedEvent(
         confirmedReservation.id,
         confirmedReservation.userId,

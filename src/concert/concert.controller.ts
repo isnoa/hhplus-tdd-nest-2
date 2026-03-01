@@ -187,9 +187,8 @@ export class ConcertController {
     @Query("limit") limit?: string,
   ): Promise<PopularityRankingsListDto> {
     const limitNum = limit ? parseInt(limit, 10) : 10;
-    const rankings = await this.popularityRankingService.getRealTimeRanking(
-      limitNum,
-    );
+    const rankings =
+      await this.popularityRankingService.getRealTimeRanking(limitNum);
     return {
       rankings: rankings as PopularityRankingsResponseDto[],
       type: "realtime",
@@ -223,9 +222,8 @@ export class ConcertController {
     @Query("limit") limit?: string,
   ): Promise<PopularityRankingsListDto> {
     const limitNum = limit ? parseInt(limit, 10) : 10;
-    const rankings = await this.popularityRankingService.getHourlyRanking(
-      limitNum,
-    );
+    const rankings =
+      await this.popularityRankingService.getHourlyRanking(limitNum);
     return {
       rankings: rankings as PopularityRankingsResponseDto[],
       type: "hourly",
@@ -259,9 +257,8 @@ export class ConcertController {
     @Query("limit") limit?: string,
   ): Promise<PopularityRankingsListDto> {
     const limitNum = limit ? parseInt(limit, 10) : 10;
-    const rankings = await this.popularityRankingService.getDailyRanking(
-      limitNum,
-    );
+    const rankings =
+      await this.popularityRankingService.getDailyRanking(limitNum);
     return {
       rankings: rankings as PopularityRankingsResponseDto[],
       type: "daily",
@@ -295,9 +292,8 @@ export class ConcertController {
     @Query("limit") limit?: string,
   ): Promise<PopularityRankingsListDto> {
     const limitNum = limit ? parseInt(limit, 10) : 10;
-    const rankings = await this.popularityRankingService.getTrendingConcerts(
-      limitNum,
-    );
+    const rankings =
+      await this.popularityRankingService.getTrendingConcerts(limitNum);
     return {
       rankings: rankings as PopularityRankingsResponseDto[],
       type: "trending",

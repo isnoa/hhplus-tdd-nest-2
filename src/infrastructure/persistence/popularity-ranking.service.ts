@@ -1,5 +1,5 @@
-import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
-import Redis from 'ioredis';
+import { Injectable, OnModuleDestroy, OnModuleInit } from "@nestjs/common";
+import Redis from "ioredis";
 
 export interface PopularityMetrics {
   concertId: number;
@@ -15,16 +15,16 @@ export class PopularityRankingService implements OnModuleInit, OnModuleDestroy {
   private client: Redis;
 
   // Redis Keys Patterns
-  private readonly RESERVATION_COUNT_KEY = 'popularity:reservations:'; // {concertId}:{scheduleId}
-  private readonly HOURLY_RANKING_KEY = 'popularity:ranking:hourly'; // Sorted Set
-  private readonly DAILY_RANKING_KEY = 'popularity:ranking:daily'; // Sorted Set
-  private readonly REAL_TIME_RANKING_KEY = 'popularity:ranking:realtime'; // Sorted Set
-  private readonly SELL_OUT_RATIO_KEY = 'popularity:sellout_ratio:'; // {concertId}:{scheduleId}
-  private readonly SCHEDULE_TOTAL_SEATS_KEY = 'schedule:total_seats:'; // {scheduleId}
+  private readonly RESERVATION_COUNT_KEY = "popularity:reservations:"; // {concertId}:{scheduleId}
+  private readonly HOURLY_RANKING_KEY = "popularity:ranking:hourly"; // Sorted Set
+  private readonly DAILY_RANKING_KEY = "popularity:ranking:daily"; // Sorted Set
+  private readonly REAL_TIME_RANKING_KEY = "popularity:ranking:realtime"; // Sorted Set
+  private readonly SELL_OUT_RATIO_KEY = "popularity:sellout_ratio:"; // {concertId}:{scheduleId}
+  private readonly SCHEDULE_TOTAL_SEATS_KEY = "schedule:total_seats:"; // {scheduleId}
 
   onModuleInit() {
-    const host = process.env.REDIS_HOST || 'localhost';
-    const port = parseInt(process.env.REDIS_PORT || '6379', 10);
+    const host = process.env.REDIS_HOST || "localhost";
+    const port = parseInt(process.env.REDIS_PORT || "6379", 10);
     this.client = new Redis({ host, port });
   }
 
@@ -58,7 +58,7 @@ export class PopularityRankingService implements OnModuleInit, OnModuleDestroy {
 
     // Calculate and update sell-out ratio
     const ratio = reservationCount / totalSeats;
-    await this.client.set(selloutRatioKey, ratio.toString(), 'EX', 86400);
+    await this.client.set(selloutRatioKey, ratio.toString(), "EX", 86400);
 
     // Update real-time ranking (using composite score)
     const score = this.calculatePopularityScore(reservationCount, ratio);
@@ -98,7 +98,7 @@ export class PopularityRankingService implements OnModuleInit, OnModuleDestroy {
       this.REAL_TIME_RANKING_KEY,
       0,
       limit - 1,
-      'WITHSCORES',
+      "WITHSCORES",
     );
 
     return this.formatRankingResults(results, 0);
@@ -115,7 +115,7 @@ export class PopularityRankingService implements OnModuleInit, OnModuleDestroy {
       hourlyRankingKey,
       0,
       limit - 1,
-      'WITHSCORES',
+      "WITHSCORES",
     );
 
     return this.formatRankingResults(results, 0);
@@ -132,7 +132,7 @@ export class PopularityRankingService implements OnModuleInit, OnModuleDestroy {
       dailyRankingKey,
       0,
       limit - 1,
-      'WITHSCORES',
+      "WITHSCORES",
     );
 
     return this.formatRankingResults(results, 0);
@@ -155,12 +155,9 @@ export class PopularityRankingService implements OnModuleInit, OnModuleDestroy {
       this.client.get(seatsKey),
     ]);
 
-    const reservationCount = parseInt(count || '0', 10);
-    const selloutRatio = parseFloat(ratio || '0');
-    const score = this.calculatePopularityScore(
-      reservationCount,
-      selloutRatio,
-    );
+    const reservationCount = parseInt(count || "0", 10);
+    const selloutRatio = parseFloat(ratio || "0");
+    const score = this.calculatePopularityScore(reservationCount, selloutRatio);
 
     return {
       concertId,
@@ -194,13 +191,13 @@ export class PopularityRankingService implements OnModuleInit, OnModuleDestroy {
       currentHourlyKey,
       0,
       -1,
-      'WITHSCORES',
+      "WITHSCORES",
     );
     const previousResults = await this.client.zrevrange(
       previousHourlyKey,
       0,
       -1,
-      'WITHSCORES',
+      "WITHSCORES",
     );
 
     // Calculate trending based on rank change
@@ -216,7 +213,9 @@ export class PopularityRankingService implements OnModuleInit, OnModuleDestroy {
   /**
    * 초근접 매진 (80% 이상) 콘서트 조회
    */
-  async getNearlySoldOutConcerts(limit: number = 10): Promise<PopularityMetrics[]> {
+  async getNearlySoldOutConcerts(
+    limit: number = 10,
+  ): Promise<PopularityMetrics[]> {
     const keys = await this.client.keys(`${this.SELL_OUT_RATIO_KEY}*`);
     const metrics: PopularityMetrics[] = [];
 
@@ -226,8 +225,8 @@ export class PopularityRankingService implements OnModuleInit, OnModuleDestroy {
       if (ratio >= 0.8) {
         // 80% 이상
         const [concertId, concertScheduleId] = key
-          .replace(this.SELL_OUT_RATIO_KEY, '')
-          .split(':')
+          .replace(this.SELL_OUT_RATIO_KEY, "")
+          .split(":")
           .map(Number);
 
         const popularity = await this.getConcertPopularity(
@@ -247,7 +246,7 @@ export class PopularityRankingService implements OnModuleInit, OnModuleDestroy {
    * 랭킹 데이터 초기화 (테스트/관리 목적)
    */
   async clearRankings(): Promise<void> {
-    const keys = await this.client.keys('popularity:*');
+    const keys = await this.client.keys("popularity:*");
     if (keys.length > 0) {
       await this.client.del(...keys);
     }
@@ -273,7 +272,7 @@ export class PopularityRankingService implements OnModuleInit, OnModuleDestroy {
    */
   private getCurrentHourKey(): string {
     const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}-${String(now.getHours()).padStart(2, '0')}`;
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}-${String(now.getHours()).padStart(2, "0")}`;
   }
 
   /**
@@ -282,7 +281,7 @@ export class PopularityRankingService implements OnModuleInit, OnModuleDestroy {
   private getPreviousHourKey(): string {
     const now = new Date();
     const oneHourAgo = new Date(now.getTime() - 3600000);
-    return `${oneHourAgo.getFullYear()}-${String(oneHourAgo.getMonth() + 1).padStart(2, '0')}-${String(oneHourAgo.getDate()).padStart(2, '0')}-${String(oneHourAgo.getHours()).padStart(2, '0')}`;
+    return `${oneHourAgo.getFullYear()}-${String(oneHourAgo.getMonth() + 1).padStart(2, "0")}-${String(oneHourAgo.getDate()).padStart(2, "0")}-${String(oneHourAgo.getHours()).padStart(2, "0")}`;
   }
 
   /**
@@ -290,7 +289,7 @@ export class PopularityRankingService implements OnModuleInit, OnModuleDestroy {
    */
   private getCurrentDayKey(): string {
     const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   }
 
   /**
@@ -305,7 +304,7 @@ export class PopularityRankingService implements OnModuleInit, OnModuleDestroy {
     for (let i = 0; i < results.length; i += 2) {
       const key = results[i] as string;
       const score = parseFloat(results[i + 1] as string);
-      const [concertId, concertScheduleId] = key.split(':').map(Number);
+      const [concertId, concertScheduleId] = key.split(":").map(Number);
 
       metrics.push({
         concertId,
@@ -352,7 +351,7 @@ export class PopularityRankingService implements OnModuleInit, OnModuleDestroy {
     // 트렌드 점수 기준 정렬
     const trending = Array.from(trendingMap.entries())
       .map(([key, value]) => {
-        const [concertId, concertScheduleId] = key.split(':').map(Number);
+        const [concertId, concertScheduleId] = key.split(":").map(Number);
         return {
           concertId,
           concertScheduleId,

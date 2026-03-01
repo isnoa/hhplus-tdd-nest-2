@@ -177,12 +177,13 @@ export class ReservationService {
       });
       if (schedule) {
         this.popularityRankingService
-          .recordReservation(schedule.concertId, schedule.id, schedule.totalSeats)
+          .recordReservation(
+            schedule.concertId,
+            schedule.id,
+            schedule.totalSeats,
+          )
           .catch((error) => {
-            console.error(
-              "Failed to record popularity ranking:",
-              error,
-            );
+            console.error("Failed to record popularity ranking:", error);
           });
       }
     } catch (error) {

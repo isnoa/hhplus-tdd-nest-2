@@ -7,6 +7,7 @@ import {
 import { InjectRepository } from "@nestjs/typeorm";
 import { DataSource, Repository } from "typeorm";
 import { RedisLockService } from "../infrastructure/persistence/redis-lock.service";
+import { PopularityRankingService } from "../infrastructure/persistence/popularity-ranking.service";
 import { Cron, CronExpression } from "@nestjs/schedule";
 import {
   Reservation,
@@ -28,6 +29,7 @@ export class ReservationService {
     private readonly scheduleRepository: Repository<ConcertSchedule>,
     private readonly dataSource: DataSource,
     private readonly redisLockService: RedisLockService,
+    private readonly popularityRankingService: PopularityRankingService,
   ) {}
 
   /**
@@ -166,7 +168,28 @@ export class ReservationService {
     }
 
     reservation.status = ReservationStatus.CONFIRMED;
-    return manager.save(reservation);
+    const confirmedReservation = await manager.save(reservation);
+
+    // 인기도 랭킹 업데이트 (비동기로 수행)
+    try {
+      const schedule = await manager.findOne(ConcertSchedule, {
+        where: { id: reservation.concertScheduleId },
+      });
+      if (schedule) {
+        this.popularityRankingService
+          .recordReservation(schedule.concertId, schedule.id, schedule.totalSeats)
+          .catch((error) => {
+            console.error(
+              "Failed to record popularity ranking:",
+              error,
+            );
+          });
+      }
+    } catch (error) {
+      console.error("Error updating popularity ranking:", error);
+    }
+
+    return confirmedReservation;
   }
 
   /**

@@ -6,11 +6,13 @@ import { Seat } from './entities/seat.entity';
 import { ConcertService } from './concert.service';
 import { ConcertController } from './concert.controller';
 import { QueueModule } from '../queue/queue.module';
+import { InfrastructureModule } from '../infrastructure/infrastructure.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Concert, ConcertSchedule, Seat]),
     QueueModule,
+    InfrastructureModule,
   ],
   controllers: [ConcertController],
   providers: [ConcertService],

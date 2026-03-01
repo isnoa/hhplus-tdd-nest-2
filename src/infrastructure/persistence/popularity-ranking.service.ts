@@ -41,14 +41,16 @@ export class PopularityRankingService implements OnModuleInit, OnModuleDestroy {
   async recordReservation(
     concertId: number,
     concertScheduleId: number,
-    totalSeats: number,
+    totalSeats?: number,
   ): Promise<void> {
     const reservationKey = `${this.RESERVATION_COUNT_KEY}${concertId}:${concertScheduleId}`;
     const selloutRatioKey = `${this.SELL_OUT_RATIO_KEY}${concertId}:${concertScheduleId}`;
     const seatsKey = `${this.SCHEDULE_TOTAL_SEATS_KEY}${concertScheduleId}`;
 
-    // Store total seats (only if not already set)
-    await this.client.setnx(seatsKey, totalSeats);
+    // Store total seats (only if not already set and provided)
+    if (totalSeats) {
+      await this.client.setnx(seatsKey, totalSeats);
+    }
 
     // Increment reservation counter
     const reservationCount = await this.client.incr(reservationKey);
@@ -56,8 +58,21 @@ export class PopularityRankingService implements OnModuleInit, OnModuleDestroy {
     // Set expiry (24 hours for daily tracking)
     await this.client.expire(reservationKey, 86400);
 
+    // If totalSeats is not provided, try to get it from Redis
+    let totalSeatsForCalc = totalSeats;
+    if (!totalSeatsForCalc) {
+      const storedSeats = await this.client.get(seatsKey);
+      if (storedSeats) {
+        totalSeatsForCalc = parseInt(storedSeats, 10);
+      } else {
+        // If totalSeats is still not available, skip ratio calculation
+        // This can happen with Kafka consumers that don't have full data
+        return;
+      }
+    }
+
     // Calculate and update sell-out ratio
-    const ratio = reservationCount / totalSeats;
+    const ratio = reservationCount / totalSeatsForCalc;
     await this.client.set(selloutRatioKey, ratio.toString(), "EX", 86400);
 
     // Update real-time ranking (using composite score)

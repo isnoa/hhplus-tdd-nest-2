@@ -106,9 +106,9 @@ ConsumerGroup-A (데이터 분석용 기준)
 ㄴ Consumer3 -> Partition2
 
 ConsumerGroup-B (모니터링용)
-├── Consumer1 → Partition0
-├── Consumer2 → Partition1
-└── Consumer3 → Partition2
+ㄴ Consumer1 -> Partition0
+ㄴ Consumer2 -> Partition1
+ㄴ Consumer3 -> Partition2
 ```
 
 **특징**:

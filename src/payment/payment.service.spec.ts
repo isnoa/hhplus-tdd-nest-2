@@ -1,6 +1,6 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { getRepositoryToken } from "@nestjs/typeorm";
-import { BadRequestException, NotFoundException } from "@nestjs/common";
+import { BadRequestException, NotFoundException, ConflictException } from "@nestjs/common";
 import { DataSource } from "typeorm";
 import { PaymentService } from "./payment.service";
 import { Payment } from "./entities/payment.entity";
@@ -12,6 +12,7 @@ import {
   ReservationStatus,
 } from "../reservation/entities/reservation.entity";
 import { ConcertSchedule } from "../concert/entities/concert-schedule.entity";
+import { RedisLockService } from "../infrastructure/persistence/redis-lock.service";
 
 /**
  * PaymentService 레이어드 아키텍처 테스트
@@ -65,6 +66,13 @@ describe("PaymentService - 레이어드 아키텍처 테스트", () => {
         { provide: UserService, useValue: mockUserService },
         { provide: QueueService, useValue: mockQueueService },
         { provide: DataSource, useValue: mockDataSource },
+        {
+          provide: RedisLockService,
+          useValue: {
+            acquire: jest.fn().mockResolvedValue(true),
+            release: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
@@ -151,6 +159,16 @@ describe("PaymentService - 레이어드 아키텍처 테스트", () => {
       expect(manager.create).toHaveBeenCalled();
       expect(manager.save).toHaveBeenCalled();
       expect(mockQueueService.expireToken).toHaveBeenCalledWith(queueToken);
+    });
+
+    it("락을 획득하지 못하면 ConflictException을 던져야 한다", async () => {
+      // lock 획득 실패 시나리오
+      // 먼저 service 내부에 mock을 덮어씌움
+      (service as any).redisLockService.acquire = jest.fn().mockResolvedValue(false);
+
+      await expect(
+        service.processPayment(1, "test-token", { reservationId: 1 }),
+      ).rejects.toThrow(ConflictException);
     });
   });
 

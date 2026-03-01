@@ -10,6 +10,7 @@ import {
 } from "./entities/reservation.entity";
 import { Seat, SeatStatus } from "../concert/entities/seat.entity";
 import { ConcertSchedule } from "../concert/entities/concert-schedule.entity";
+import { RedisLockService } from "../infrastructure/persistence/redis-lock.service";
 
 /**
  * ReservationService 레이어드 아키텍처 테스트
@@ -66,6 +67,14 @@ describe("ReservationService - 레이어드 아키텍처 테스트", () => {
           useFactory: mockScheduleRepo,
         },
         { provide: DataSource, useValue: mockDataSource },
+        // mock distributed lock service
+        {
+          provide: RedisLockService,
+          useValue: {
+            acquire: jest.fn().mockResolvedValue(true),
+            release: jest.fn(),
+          },
+        },
       ],
     }).compile();
 

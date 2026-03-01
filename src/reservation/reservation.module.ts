@@ -7,6 +7,7 @@ import { ReservationController } from "./reservation.controller";
 import { QueueModule } from "../queue/queue.module";
 import { ConcertModule } from "../concert/concert.module";
 import { Seat } from "../concert/entities/seat.entity";
+import { InfrastructureModule } from "../infrastructure/infrastructure.module";
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { Seat } from "../concert/entities/seat.entity";
     ScheduleModule.forRoot(),
     QueueModule,
     ConcertModule,
+    InfrastructureModule,
   ],
   controllers: [ReservationController],
   providers: [ReservationService],

@@ -6,6 +6,8 @@ import {
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { DataSource, Repository } from "typeorm";
+import { RedisLockService } from "../infrastructure/persistence/redis-lock.service";
+import { PopularityRankingService } from "../infrastructure/persistence/popularity-ranking.service";
 import { Cron, CronExpression } from "@nestjs/schedule";
 import {
   Reservation,
@@ -26,6 +28,8 @@ export class ReservationService {
     @InjectRepository(ConcertSchedule)
     private readonly scheduleRepository: Repository<ConcertSchedule>,
     private readonly dataSource: DataSource,
+    private readonly redisLockService: RedisLockService,
+    private readonly popularityRankingService: PopularityRankingService,
   ) {}
 
   /**
@@ -37,65 +41,77 @@ export class ReservationService {
     userId: number,
     dto: CreateReservationDto,
   ): Promise<Reservation> {
-    return await this.dataSource.transaction(async (manager) => {
-      // 일정 유효성 검사
-      const schedule = await manager.findOne(ConcertSchedule, {
-        where: { id: dto.concertScheduleId },
-      });
-      if (!schedule)
-        throw new NotFoundException("콘서트 일정을 찾을 수 없습니다.");
-
-      // 좌석에 락 걸기
-      const seat = await manager
-        .createQueryBuilder(Seat, "seat")
-        .setLock("pessimistic_write")
-        .where(
-          "seat.concertScheduleId = :scheduleId AND seat.seatNumber = :seatNumber",
-          {
-            scheduleId: dto.concertScheduleId,
-            seatNumber: dto.seatNumber,
-          },
-        )
-        .getOne();
-
-      if (!seat) throw new NotFoundException("좌석을 찾을 수 없습니다.");
-
-      // 만료된 임시 예약 좌석 해제
-      if (
-        seat.status === SeatStatus.TEMP_RESERVED &&
-        seat.tempReservedUntil &&
-        seat.tempReservedUntil <= new Date()
-      ) {
-        seat.status = SeatStatus.AVAILABLE;
-        seat.tempReservedUntil = null;
-        seat.tempReservedUserId = null;
-      }
-
-      if (seat.status !== SeatStatus.AVAILABLE) {
-        throw new ConflictException("이미 예약된 좌석입니다.");
-      }
-
-      const now = new Date();
-      const expiresAt = new Date(
-        now.getTime() + TEMP_RESERVATION_MINUTES * 60 * 1000,
+    // distributed redis lock to guard seat across instances
+    const lockKey = `seat:${dto.concertScheduleId}:${dto.seatNumber}`;
+    const locked = await this.redisLockService.acquire(lockKey, 5000);
+    if (!locked) {
+      throw new ConflictException(
+        "다른 예약 요청이 진행 중입니다. 잠시 후 다시 시도해주세요.",
       );
+    }
+    try {
+      return await this.dataSource.transaction(async (manager) => {
+        // 일정 유효성 검사
+        const schedule = await manager.findOne(ConcertSchedule, {
+          where: { id: dto.concertScheduleId },
+        });
+        if (!schedule)
+          throw new NotFoundException("콘서트 일정을 찾을 수 없습니다.");
 
-      // 좌석 임시 배정
-      seat.status = SeatStatus.TEMP_RESERVED;
-      seat.tempReservedUntil = expiresAt;
-      seat.tempReservedUserId = userId;
-      await manager.save(seat);
+        // 좌석에 락 걸기
+        const seat = await manager
+          .createQueryBuilder(Seat, "seat")
+          .setLock("pessimistic_write")
+          .where(
+            "seat.concertScheduleId = :scheduleId AND seat.seatNumber = :seatNumber",
+            {
+              scheduleId: dto.concertScheduleId,
+              seatNumber: dto.seatNumber,
+            },
+          )
+          .getOne();
 
-      // 예약 엔티티 생성
-      const reservation = manager.create(Reservation, {
-        userId,
-        seatId: seat.id,
-        concertScheduleId: dto.concertScheduleId,
-        status: ReservationStatus.PENDING,
-        expiresAt,
+        if (!seat) throw new NotFoundException("좌석을 찾을 수 없습니다.");
+
+        // 만료된 임시 예약 좌석 해제
+        if (
+          seat.status === SeatStatus.TEMP_RESERVED &&
+          seat.tempReservedUntil &&
+          seat.tempReservedUntil <= new Date()
+        ) {
+          seat.status = SeatStatus.AVAILABLE;
+          seat.tempReservedUntil = null;
+          seat.tempReservedUserId = null;
+        }
+
+        if (seat.status !== SeatStatus.AVAILABLE) {
+          throw new ConflictException("이미 예약된 좌석입니다.");
+        }
+
+        const now = new Date();
+        const expiresAt = new Date(
+          now.getTime() + TEMP_RESERVATION_MINUTES * 60 * 1000,
+        );
+
+        // 좌석 임시 배정
+        seat.status = SeatStatus.TEMP_RESERVED;
+        seat.tempReservedUntil = expiresAt;
+        seat.tempReservedUserId = userId;
+        await manager.save(seat);
+
+        // 예약 엔티티 생성
+        const reservation = manager.create(Reservation, {
+          userId,
+          seatId: seat.id,
+          concertScheduleId: dto.concertScheduleId,
+          status: ReservationStatus.PENDING,
+          expiresAt,
+        });
+        return manager.save(reservation);
       });
-      return manager.save(reservation);
-    });
+    } finally {
+      await this.redisLockService.release(lockKey);
+    }
   }
 
   async getReservation(reservationId: number): Promise<Reservation> {
@@ -152,7 +168,29 @@ export class ReservationService {
     }
 
     reservation.status = ReservationStatus.CONFIRMED;
-    return manager.save(reservation);
+    const confirmedReservation = await manager.save(reservation);
+
+    // 인기도 랭킹 업데이트 (비동기로 수행)
+    try {
+      const schedule = await manager.findOne(ConcertSchedule, {
+        where: { id: reservation.concertScheduleId },
+      });
+      if (schedule) {
+        this.popularityRankingService
+          .recordReservation(
+            schedule.concertId,
+            schedule.id,
+            schedule.totalSeats,
+          )
+          .catch((error) => {
+            console.error("Failed to record popularity ranking:", error);
+          });
+      }
+    } catch (error) {
+      console.error("Error updating popularity ranking:", error);
+    }
+
+    return confirmedReservation;
   }
 
   /**

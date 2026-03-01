@@ -1,5 +1,5 @@
 import { Test, TestingModule } from "@nestjs/testing";
-import { INestApplication } from "@nestjs/common";
+import { INestApplication, ConflictException } from "@nestjs/common";
 import { AppModule } from "../../src/app.module";
 import { DataSource, Repository } from "typeorm";
 import { getRepositoryToken } from "@nestjs/typeorm";
@@ -8,6 +8,7 @@ import { UserService } from "../../src/user/user.service";
 import { ConcertService } from "../../src/concert/concert.service";
 import { QueueService } from "../../src/queue/queue.service";
 import { PaymentService } from "../../src/payment/payment.service";
+import { RedisLockService } from "../../src/infrastructure/persistence/redis-lock.service";
 import { Concert } from "../../src/concert/entities/concert.entity";
 import { ConcertSchedule } from "../../src/concert/entities/concert-schedule.entity";
 import { Seat, SeatStatus } from "../../src/concert/entities/seat.entity";
@@ -29,6 +30,7 @@ describe("동시성 제어 (Concurrency Control) 테스트", () => {
   let userRepository: Repository<User>;
   let reservationRepository: Repository<Reservation>;
   let pointHistoryRepository: Repository<PointHistory>;
+  let redisLockService: RedisLockService;
 
   beforeAll(async () => {
     const moduleRef: TestingModule = await Test.createTestingModule({
@@ -47,6 +49,7 @@ describe("동시성 제어 (Concurrency Control) 테스트", () => {
     concertRepository = moduleRef.get<Repository<Concert>>(
       getRepositoryToken(Concert),
     );
+    redisLockService = moduleRef.get<RedisLockService>(RedisLockService);
     concertScheduleRepository = moduleRef.get<Repository<ConcertSchedule>>(
       getRepositoryToken(ConcertSchedule),
     );
@@ -66,6 +69,35 @@ describe("동시성 제어 (Concurrency Control) 테스트", () => {
 
   afterAll(async () => {
     await app.close();
+  });
+
+  describe('Redis 분산락 기능', () => {
+    it('같은 키에 동시 접근 시 하나만 획득할 수 있어야 함', async () => {
+      const key = 'lock:test';
+      const ttl = 1000;
+      const attempts = Array.from({ length: 3 }, () =>
+        redisLockService.acquire(key, ttl).then((ok) => ok),
+      );
+      const results = await Promise.all(attempts);
+      const successCount = results.filter((r) => r).length;
+      expect(successCount).toBe(1);
+
+      // lock 해제 후 다시 시도
+      await redisLockService.release(key);
+      const second = await redisLockService.acquire(key, ttl);
+      expect(second).toBe(true);
+    });
+
+    it('TTL 경과 후에는 락이 자동 해제되어야 함', async () => {
+      const key = 'lock:expire';
+      const ttl = 100;
+      const ok1 = await redisLockService.acquire(key, ttl);
+      expect(ok1).toBe(true);
+      // wait for TTL
+      await new Promise((r) => setTimeout(r, ttl + 50));
+      const ok2 = await redisLockService.acquire(key, ttl);
+      expect(ok2).toBe(true);
+    });
   });
 
   // 테스트 데이터 초기화 헬퍼
@@ -159,6 +191,52 @@ describe("동시성 제어 (Concurrency Control) 테스트", () => {
 
       // 최소 2개 이상의 요청이 실패해야 함
       expect(failedResults.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it("외부에서 락을 획득하면 예약 서비스가 거부되어야 함", async () => {
+      const key = `seat:${concertScheduleId}:${seatNumber}`;
+      await redisLockService.acquire(key, 5000);
+      await expect(
+        reservationService.createReservation(userIds[0], {
+          concertScheduleId,
+          seatNumber,
+        }),
+      ).rejects.toThrow(ConflictException);
+      await redisLockService.release(key);
+    });
+
+    it("외부에서 락을 획득하면 결제 서비스가 거부되어야 함", async () => {
+      // 준비: 먼저 좌석 예약 성공
+      const concert = await concertRepository.save({ name: 'LockTest' });
+      const schedule = await concertScheduleRepository.save({
+        concertId: concert.id,
+        concertDate: new Date().toISOString().split('T')[0],
+        totalSeats: 1,
+        price: 100,
+      });
+      const seat = await seatRepository.save({
+        concertScheduleId: schedule.id,
+        seatNumber: 1,
+        status: SeatStatus.AVAILABLE,
+      } as any);
+      const user = await userRepository.save({
+        email: 'pay@test.com',
+        name: 'Pay User',
+        point: 1000,
+      });
+      const reservation = await reservationService.createReservation(user.id, {
+        concertScheduleId: schedule.id,
+        seatNumber: 1,
+      });
+
+      const key = `reservation:${reservation.id}`;
+      await redisLockService.acquire(key, 5000);
+      await expect(
+        paymentService.processPayment(user.id, 'token', {
+          reservationId: reservation.id,
+        }),
+      ).rejects.toThrow(ConflictException);
+      await redisLockService.release(key);
     });
   });
 

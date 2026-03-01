@@ -43,43 +43,45 @@ export class PaymentService {
     const lockKey = `reservation:${dto.reservationId}`;
     const locked = await this.redisLockService.acquire(lockKey, 5000);
     if (!locked) {
-      throw new ConflictException('다른 결제 요청이 진행 중입니다. 잠시 후 다시 시도해주세요.');
+      throw new ConflictException(
+        "다른 결제 요청이 진행 중입니다. 잠시 후 다시 시도해주세요.",
+      );
     }
     try {
       return await this.dataSource
         .transaction(async (manager) => {
-        // 예약 확정 및 좌석 락
-        const reservation = await this.reservationService.confirmReservation(
-          dto.reservationId,
-          userId,
-          manager,
-        );
+          // 예약 확정 및 좌석 락
+          const reservation = await this.reservationService.confirmReservation(
+            dto.reservationId,
+            userId,
+            manager,
+          );
 
-        // 가격 조회
-        const schedule = await manager.findOne(ConcertSchedule, {
-          where: { id: reservation.concertScheduleId },
+          // 가격 조회
+          const schedule = await manager.findOne(ConcertSchedule, {
+            where: { id: reservation.concertScheduleId },
+          });
+          if (!schedule)
+            throw new NotFoundException("콘서트 일정을 찾을 수 없습니다.");
+
+          const price = schedule.price;
+
+          // 포인트 차감
+          await this.userService.deductPoint(userId, price, manager);
+
+          // 결제 내역 저장
+          const payment = manager.create(Payment, {
+            userId,
+            reservationId: reservation.id,
+            amount: price,
+          });
+          return manager.save(payment);
+        })
+        .then(async (payment) => {
+          // 결제 후 대기열 토큰 만료 처리
+          await this.queueService.expireToken(queueToken);
+          return payment;
         });
-        if (!schedule)
-          throw new NotFoundException("콘서트 일정을 찾을 수 없습니다.");
-
-        const price = schedule.price;
-
-        // 포인트 차감
-        await this.userService.deductPoint(userId, price, manager);
-
-        // 결제 내역 저장
-        const payment = manager.create(Payment, {
-          userId,
-          reservationId: reservation.id,
-          amount: price,
-        });
-        return manager.save(payment);
-      })
-      .then(async (payment) => {
-        // 결제 후 대기열 토큰 만료 처리
-        await this.queueService.expireToken(queueToken);
-        return payment;
-      });
     } finally {
       await this.redisLockService.release(lockKey);
     }

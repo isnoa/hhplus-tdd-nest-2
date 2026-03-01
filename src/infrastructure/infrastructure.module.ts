@@ -7,6 +7,8 @@ import { UserBalanceRepository } from "./persistence/user-balance/user-balance.r
 import { PaymentRepository } from "./persistence/payment/payment.repository.impl";
 import { RedisLockService } from "./persistence/redis-lock.service";
 import { PopularityRankingService } from "./persistence/popularity-ranking.service";
+import { DataPlatformApiClient } from "./external-api/data-platform.api-client";
+import { DataPlatformService } from "./external-api/data-platform.service";
 import { Seat } from "../concert/entities/seat.entity";
 import { User } from "../user/entities/user.entity";
 import { Payment } from "../payment/entities/payment.entity";
@@ -46,6 +48,9 @@ import { IPaymentRepository } from "./domain/repositories/payment.repository.int
     RedisLockService,
     // popularity ranking service
     PopularityRankingService,
+    // external api services
+    DataPlatformApiClient,
+    DataPlatformService,
   ],
   exports: [
     "IQueueTokenRepository",
@@ -58,6 +63,8 @@ import { IPaymentRepository } from "./domain/repositories/payment.repository.int
     PaymentRepository,
     RedisLockService,
     PopularityRankingService,
+    DataPlatformApiClient,
+    DataPlatformService,
   ],
 })
 export class InfrastructureModule {}

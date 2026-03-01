@@ -7,6 +7,12 @@ import { UserBalanceRepository } from "./persistence/user-balance/user-balance.r
 import { PaymentRepository } from "./persistence/payment/payment.repository.impl";
 import { RedisLockService } from "./persistence/redis-lock.service";
 import { PopularityRankingService } from "./persistence/popularity-ranking.service";
+import { DataPlatformApiClient } from "./external-api/data-platform.api-client";
+import { DataPlatformService } from "./external-api/data-platform.service";
+import { KafkaProducerService } from "./external-api/kafka-producer.service";
+import { KafkaConsumerService } from "./external-api/kafka-consumer.service";
+import { PopularityRankingConsumer } from "./external-api/popularity-ranking.consumer";
+import { DataPlatformConsumer } from "./external-api/data-platform.consumer";
 import { Seat } from "../concert/entities/seat.entity";
 import { User } from "../user/entities/user.entity";
 import { Payment } from "../payment/entities/payment.entity";
@@ -17,7 +23,7 @@ import { IPaymentRepository } from "./domain/repositories/payment.repository.int
 
 /**
  * Infrastructure Module
- * 외부 세계와의 모든 연결(DB, 캐시, 외부 API 등)을 담당
+ * 외부 세계와의 모든 연결(DB, 캐시, 외부 API, Kafka 등)을 담당
  */
 @Module({
   imports: [TypeOrmModule.forFeature([QueueToken, Seat, User, Payment])],
@@ -46,6 +52,15 @@ import { IPaymentRepository } from "./domain/repositories/payment.repository.int
     RedisLockService,
     // popularity ranking service
     PopularityRankingService,
+    // external api services
+    DataPlatformApiClient,
+    DataPlatformService,
+    // Kafka services
+    KafkaProducerService,
+    KafkaConsumerService,
+    // Kafka consumers
+    PopularityRankingConsumer,
+    DataPlatformConsumer,
   ],
   exports: [
     "IQueueTokenRepository",
@@ -58,6 +73,12 @@ import { IPaymentRepository } from "./domain/repositories/payment.repository.int
     PaymentRepository,
     RedisLockService,
     PopularityRankingService,
+    DataPlatformApiClient,
+    DataPlatformService,
+    KafkaProducerService,
+    KafkaConsumerService,
+    PopularityRankingConsumer,
+    DataPlatformConsumer,
   ],
 })
 export class InfrastructureModule {}

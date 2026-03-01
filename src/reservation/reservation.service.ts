@@ -6,6 +6,7 @@ import {
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { DataSource, Repository } from "typeorm";
+import { EventEmitter2 } from "@nestjs/event-emitter";
 import { RedisLockService } from "../infrastructure/persistence/redis-lock.service";
 import { PopularityRankingService } from "../infrastructure/persistence/popularity-ranking.service";
 import { Cron, CronExpression } from "@nestjs/schedule";
@@ -17,6 +18,10 @@ import {
 import { Seat, SeatStatus } from "../concert/entities/seat.entity";
 import { ConcertSchedule } from "../concert/entities/concert-schedule.entity";
 import { CreateReservationDto } from "./dto/create-reservation.dto";
+import {
+  ReservationConfirmedEvent,
+  ReservationCreatedEvent,
+} from "./events/reservation.events";
 
 @Injectable()
 export class ReservationService {
@@ -30,6 +35,7 @@ export class ReservationService {
     private readonly dataSource: DataSource,
     private readonly redisLockService: RedisLockService,
     private readonly popularityRankingService: PopularityRankingService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   /**
@@ -107,7 +113,24 @@ export class ReservationService {
           status: ReservationStatus.PENDING,
           expiresAt,
         });
-        return manager.save(reservation);
+        await manager.save(reservation);
+
+        // 예약 생성 이벤트 발행 (데이터 플랫폼 전송 등의 처리가 비동기로 수행됨)
+        try {
+          const event = new ReservationCreatedEvent(
+            reservation.id,
+            reservation.userId,
+            schedule.concertId,
+            reservation.concertScheduleId,
+            seat.id,
+            new Date(),
+          );
+          this.eventEmitter.emit("reservation.created", event);
+        } catch (error) {
+          console.error("Error emitting reservation created event:", error);
+        }
+
+        return reservation;
       });
     } finally {
       await this.redisLockService.release(lockKey);
@@ -189,6 +212,19 @@ export class ReservationService {
     } catch (error) {
       console.error("Error updating popularity ranking:", error);
     }
+
+    // 예약 확인 이벤트 발행 (데이터 플랫폼 전송 등의 처리가 비동기로 수행됨)
+    this.eventEmitter.emit(
+      "reservation.confirmed",
+      new ReservationConfirmedEvent(
+        confirmedReservation.id,
+        confirmedReservation.userId,
+        reservation.concertScheduleId,
+        reservation.concertScheduleId,
+        seat?.id || 0,
+        new Date(),
+      ),
+    );
 
     return confirmedReservation;
   }

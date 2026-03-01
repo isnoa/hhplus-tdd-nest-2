@@ -4,6 +4,7 @@ import { ScheduleModule } from "@nestjs/schedule";
 import { Reservation } from "./entities/reservation.entity";
 import { ReservationService } from "./reservation.service";
 import { ReservationController } from "./reservation.controller";
+import { ReservationEventHandler } from "./events/reservation.event-handler";
 import { QueueModule } from "../queue/queue.module";
 import { ConcertModule } from "../concert/concert.module";
 import { Seat } from "../concert/entities/seat.entity";
@@ -18,7 +19,7 @@ import { InfrastructureModule } from "../infrastructure/infrastructure.module";
     InfrastructureModule,
   ],
   controllers: [ReservationController],
-  providers: [ReservationService],
+  providers: [ReservationService, ReservationEventHandler],
   exports: [ReservationService],
 })
 export class ReservationModule {}

@@ -5,8 +5,7 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { DataSource, Repository } from "typeorm";
-import { Cron, CronExpression } from "@nestjs/schedule";
+import { DataSource, Repository } from "typeorm";import { RedisLockService } from '../infrastructure/persistence/redis-lock.service';import { Cron, CronExpression } from "@nestjs/schedule";
 import {
   Reservation,
   ReservationStatus,
@@ -26,6 +25,7 @@ export class ReservationService {
     @InjectRepository(ConcertSchedule)
     private readonly scheduleRepository: Repository<ConcertSchedule>,
     private readonly dataSource: DataSource,
+    private readonly redisLockService: RedisLockService,
   ) {}
 
   /**
@@ -37,7 +37,14 @@ export class ReservationService {
     userId: number,
     dto: CreateReservationDto,
   ): Promise<Reservation> {
-    return await this.dataSource.transaction(async (manager) => {
+    // distributed redis lock to guard seat across instances
+    const lockKey = `seat:${dto.concertScheduleId}:${dto.seatNumber}`;
+    const locked = await this.redisLockService.acquire(lockKey, 5000);
+    if (!locked) {
+      throw new ConflictException('다른 예약 요청이 진행 중입니다. 잠시 후 다시 시도해주세요.');
+    }
+    try {
+      return await this.dataSource.transaction(async (manager) => {
       // 일정 유효성 검사
       const schedule = await manager.findOne(ConcertSchedule, {
         where: { id: dto.concertScheduleId },
@@ -96,6 +103,9 @@ export class ReservationService {
       });
       return manager.save(reservation);
     });
+    } finally {
+      await this.redisLockService.release(lockKey);
+    }
   }
 
   async getReservation(reservationId: number): Promise<Reservation> {

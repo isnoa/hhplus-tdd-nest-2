@@ -1,10 +1,11 @@
 import { DataSource } from "typeorm";
 import * as fs from "fs";
 import { MySqlContainer } from "@testcontainers/mysql";
+import { RedisContainer } from "@testcontainers/redis";
 import { getDatasource } from "./util";
 
 const init = async () => {
-  await Promise.all([initMysql()]);
+  await Promise.all([initMysql(), initRedis()]);
 };
 
 const initMysql = async () => {
@@ -26,6 +27,14 @@ const initMysql = async () => {
   const datasource = await getDatasource();
   await datasource.runMigrations();
   await insertTestData(datasource);
+};
+
+const initRedis = async () => {
+  const redis = await new RedisContainer("redis:7").start();
+  global.redis = redis;
+
+  process.env.REDIS_HOST = redis.getHost();
+  process.env.REDIS_PORT = redis.getPort().toString();
 };
 
 const insertTestData = async (datasource: DataSource) => {

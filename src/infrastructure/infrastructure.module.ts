@@ -5,6 +5,7 @@ import { QueueTokenRepository } from "./persistence/queue-token/queue-token.repo
 import { SeatReservationRepository } from "./persistence/seat-reservation/seat-reservation.repository.impl";
 import { UserBalanceRepository } from "./persistence/user-balance/user-balance.repository.impl";
 import { PaymentRepository } from "./persistence/payment/payment.repository.impl";
+import { RedisLockService } from "./persistence/redis-lock.service";
 import { Seat } from "../concert/entities/seat.entity";
 import { User } from "../user/entities/user.entity";
 import { Payment } from "../payment/entities/payment.entity";
@@ -40,6 +41,8 @@ import { IPaymentRepository } from "./domain/repositories/payment.repository.int
     SeatReservationRepository,
     UserBalanceRepository,
     PaymentRepository,
+    // distributed lock service
+    RedisLockService,
   ],
   exports: [
     "IQueueTokenRepository",
@@ -50,6 +53,7 @@ import { IPaymentRepository } from "./domain/repositories/payment.repository.int
     SeatReservationRepository,
     UserBalanceRepository,
     PaymentRepository,
+    RedisLockService,
   ],
 })
 export class InfrastructureModule {}

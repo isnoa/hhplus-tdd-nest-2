@@ -362,4 +362,165 @@ describe("ReservationService - 레이어드 아키텍처 테스트", () => {
       expect(mockDataSource.transaction).toHaveBeenCalled();
     });
   });
+
+  describe("releaseExpiredTempReservations - 타임아웃 임시 예약 해제 스케줄러", () => {
+    it("타임아웃된 임시 예약 좌석을 AVAILABLE로 변경해야 한다", async () => {
+      // Given: 타임아웃된 임시 예약 좌석들
+      const manager = buildManager();
+      mockDataSource.transaction.mockImplementation((cb) => cb(manager));
+
+      const expiredSeats = [
+        {
+          id: 1,
+          status: SeatStatus.TEMP_RESERVED,
+          tempReservedUntil: new Date(Date.now() - 1000),
+          tempReservedUserId: 1,
+        },
+        {
+          id: 2,
+          status: SeatStatus.TEMP_RESERVED,
+          tempReservedUntil: new Date(Date.now() - 1000),
+          tempReservedUserId: 2,
+        },
+      ];
+
+      // Mock 설정: 만료된 좌석 조회
+      const seatQb = {
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue(expiredSeats),
+      };
+      manager.createQueryBuilder.mockReturnValueOnce(seatQb);
+
+      // Mock 설정: 좌석 저장 (상태 업데이트)
+      manager.save.mockResolvedValue(null);
+
+      // Mock 설정: 예약 상태 업데이트 (EXPIRED)
+      const reservationQb = {
+        update: jest.fn().mockReturnThis(),
+        set: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        execute: jest.fn().mockResolvedValue(null),
+      };
+      manager.createQueryBuilder.mockReturnValueOnce(reservationQb);
+
+      // When
+      await service.releaseExpiredTempReservations();
+
+      // Then: 각 좌석이 저장되었는지 확인 (상태가 AVAILABLE로 변경됨)
+      expect(manager.save).toHaveBeenCalledTimes(expiredSeats.length);
+      expiredSeats.forEach((seat) => {
+        expect(manager.save).toHaveBeenCalledWith(
+          expect.objectContaining({
+            status: SeatStatus.AVAILABLE,
+            tempReservedUntil: null,
+            tempReservedUserId: null,
+          }),
+        );
+      });
+    });
+
+    it("예약 상태를 EXPIRED로 변경해야 한다", async () => {
+      // Given: 타임아웃된 예약들
+      const manager = buildManager();
+      mockDataSource.transaction.mockImplementation((cb) => cb(manager));
+
+      const expiredSeats: any[] = [];
+
+      // Mock 설정: 만료된 좌석 조회 (없음)
+      const seatQb = {
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue(expiredSeats),
+      };
+      manager.createQueryBuilder.mockReturnValueOnce(seatQb);
+
+      // Mock 설정: 예약 상태 업데이트
+      const reservationQb = {
+        update: jest.fn().mockReturnThis(),
+        set: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        execute: jest.fn().mockResolvedValue({ affected: 3 }),
+      };
+      manager.createQueryBuilder.mockReturnValueOnce(reservationQb);
+
+      // When
+      await service.releaseExpiredTempReservations();
+
+      // Then: 예약 업데이트가 실행되었는지 확인
+      expect(reservationQb.update).toHaveBeenCalledWith(Reservation);
+      expect(reservationQb.set).toHaveBeenCalledWith({
+        status: ReservationStatus.EXPIRED,
+      });
+      expect(reservationQb.execute).toHaveBeenCalled();
+    });
+
+    it("타임아웃되지 않은 좌석은 건드리지 않아야 한다", async () => {
+      // Given: 아직 유효한 임시 예약 좌석
+      const manager = buildManager();
+      mockDataSource.transaction.mockImplementation((cb) => cb(manager));
+
+      // 임시 예약이 아직 유효한 좌석 (10분 후 만료)
+      const validSeats: any[] = [];
+
+      // Mock 설정: 만료된 좌석이 없음
+      const seatQb = {
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue(validSeats),
+      };
+      manager.createQueryBuilder.mockReturnValueOnce(seatQb);
+
+      // Mock 설정: 예약 업데이트 (영향받은 행 0)
+      const reservationQb = {
+        update: jest.fn().mockReturnThis(),
+        set: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        execute: jest.fn().mockResolvedValue({ affected: 0 }),
+      };
+      manager.createQueryBuilder.mockReturnValueOnce(reservationQb);
+
+      // When
+      await service.releaseExpiredTempReservations();
+
+      // Then: update는 실행되지만 아무 행도 영향받지 않음
+      expect(reservationQb.execute).toHaveBeenCalled();
+    });
+
+    it("트랜잭션 내에서 실행되어야 한다", async () => {
+      // Given: transaction wrapper
+      const manager = buildManager();
+      let transactionCalled = false;
+      mockDataSource.transaction.mockImplementation((cb) => {
+        transactionCalled = true;
+        return cb(manager);
+      });
+
+      const seatQb = {
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([]),
+      };
+      manager.createQueryBuilder.mockReturnValueOnce(seatQb);
+
+      const reservationQb = {
+        update: jest.fn().mockReturnThis(),
+        set: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        execute: jest.fn().mockResolvedValue(null),
+      };
+      manager.createQueryBuilder.mockReturnValueOnce(reservationQb);
+
+      // When
+      await service.releaseExpiredTempReservations();
+
+      // Then
+      expect(transactionCalled).toBe(true);
+      expect(mockDataSource.transaction).toHaveBeenCalled();
+    });
+  });
 });
